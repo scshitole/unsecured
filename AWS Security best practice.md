@@ -1,4 +1,4 @@
-Perfect — let’s take **real examples** directly from the Wiz AWS Security Best Practices Cheat Sheet you uploaded, and show how **Wiz adds value** in each case.
+**Real examples** directly from the Wiz AWS Security Best Practices Cheat Sheet  show how **Wiz adds value** in each case.
 
 ---
 
