@@ -470,5 +470,167 @@ spec:
 
 ---
 
+Absolutely — here’s a complete breakdown of how **Wiz enhances Compliance & Visibility** in a Kubernetes and cloud-native environment, with a focus on **HIPAA**, **RBAC auditing**, and **attack path visualizations**.
 
+---
+
+# ✅ Compliance & Visibility Example (HIPAA, RBAC, Attack Path)
+
+---
+
+## ⚠️ Scenario
+
+You’re a healthcare SaaS provider running workloads on AWS EKS and Kubernetes.
+Your audit team needs:
+
+* Evidence of HIPAA controls in place (e.g., encrypted storage, RBAC enforcement)
+* Verification that sensitive workloads are isolated
+* Full visibility into how a vulnerability could lead to **PHI exposure**
+
+---
+
+## 🗂️ Example 1: Kubernetes Workload With Missing RBAC Controls
+
+### ⚠️ Problematic RoleBinding
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: allow-everything
+  namespace: prod
+subjects:
+- kind: User
+  name: dev-admin
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+### 🔎 What's wrong:
+
+* Dev user gets **cluster-admin** access in a production namespace
+* No scoping or separation of duty
+* Potential violation of HIPAA §164.308 (least privilege access)
+
+✅ **Wiz Detection:**
+
+* Finds RBAC misconfigurations
+* Maps “who has access to what” (User → Role → Secrets/Pods)
+
+---
+
+### ✔️ Fixed RoleBinding (Principle of Least Privilege)
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: readonly-pods
+  namespace: prod
+subjects:
+- kind: User
+  name: dev-ops
+roleRef:
+  kind: Role
+  name: view-pods
+  apiGroup: rbac.authorization.k8s.io
+```
+
+---
+
+## 🗃️ Example 2: Enforcing Encrypted Storage (HIPAA 164.312(a)(2)(iv))
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: secure-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: encrypted-gp2
+  resources:
+    requests:
+      storage: 10Gi
+```
+
+> Make sure `encrypted-gp2` is backed by an **EBS volume with encryption enabled**.
+
+✅ **Wiz Detection:**
+
+* Pulls cloud-native disk metadata
+* Flags if volumes used by workloads **aren’t encrypted**
+* Maps it back to HIPAA 164.312 compliance gaps
+
+---
+
+## 🔍 Example 3: Visualizing an Attack Path (Graph-Based)
+
+**Attack Path Wiz Might Visualize:**
+
+```
+Internet → Ingress → Pod (running as root) → Mounted Secret → AWS IAM Role → S3 with PHI
+```
+
+### How?
+
+* **Wiz risk graph** connects:
+
+  * Network exposure
+  * Pod runtime config
+  * ServiceAccount + IAM permissions
+  * Cloud storage targets (S3 buckets)
+
+✅ Results:
+
+* Graph view of all **chained misconfigs**
+* Prioritized by *real exploitable paths*
+* Helps pass audits by proving no direct risk to PHI
+
+---
+
+## 🛡️ Example 4: Enforcing Policies (Admission Controller / Gatekeeper)
+
+### Block pods that run as root (HIPAA safeguard: prevent unauthorized access)
+
+```yaml
+apiVersion: policy/v1
+kind: PodSecurityPolicy
+metadata:
+  name: no-root-access
+spec:
+  privileged: false
+  runAsUser:
+    rule: MustRunAsNonRoot
+  seLinux:
+    rule: RunAsAny
+```
+
+📝 Use OPA Gatekeeper or Kyverno to enforce this cluster-wide.
+
+---
+
+## 📈 How Wiz Maps to HIPAA Controls
+
+| HIPAA Safeguard                       | Wiz Detection Capability                                      |
+| ------------------------------------- | ------------------------------------------------------------- |
+| §164.308(a)(1)(ii)(A) – Risk Analysis | Graph-based risk visualization, prioritized by exploitability |
+| §164.312(a)(2)(iv) – Encryption       | Scans for unencrypted cloud disks and unencrypted S3 buckets  |
+| §164.308(a)(4) – Access Control       | Detects overly permissive RBAC, IAM access paths              |
+| §164.312(d) – Person/entity auth      | Detects shared kubeconfigs, anonymous access to API/kubelet   |
+
+---
+
+## 🧠 Summary
+
+**Wiz gives auditors, security, and engineers:**
+
+* A **visual map** of how vulnerabilities → real data exposure
+* Cross-layer correlation (K8s + IAM + storage)
+* Continuous HIPAA and SOC2 posture tracking
+* Built-in reports mapped to compliance frameworks
+
+---
 
