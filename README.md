@@ -1,6 +1,4 @@
-# unsecured
 
-Absolutely — here are **YAML examples** that demonstrate three common Kubernetes security misconfigurations, which **Wiz would detect and prioritize** as risks:
 
 ---
 
