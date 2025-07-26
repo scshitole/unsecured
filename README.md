@@ -1,3 +1,9 @@
+| 📦 **Category**             | 🔍 Example Use Cases                                   |
+| --------------------------- | ------------------------------------------------------ |
+| **Kubernetes Security**     | Privileged pods, exposed kubelets, bad ingress configs |
+| **Cloud Risk Correlation**  | Exposed S3 bucket → pod → IAM role → data breach path  |
+| **CI/CD & Image Security**  | CVEs in base images, untrusted registries, no scanning |
+| **Compliance & Visibility** | HIPAA mapping, RBAC audit, attack path visualizations  |
 
 
 ---
